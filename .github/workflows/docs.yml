@@ -21,20 +21,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
 
+      # 缓存 node_modules
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: |
+            **/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      # 如果缓存没有命中，安装依赖
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        run: yarn --frozen-lockfile
 
-      - name: Build documentation site
-        run: pnpm docs:release
+        # 运行构建脚本
+      - name: Build VuePress site
+        run: yarn docs:build
 
       - name: Deploy to GitHub Pages
         uses: crazy-max/ghaction-github-pages@v2.2.0
